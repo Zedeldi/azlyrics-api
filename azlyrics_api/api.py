@@ -1,24 +1,11 @@
 import re
 import string
-from dataclasses import dataclass
-from itertools import count
-from pathlib import Path
 from typing import Optional
 
-import lxml.builder
-import lxml.etree
 import requests
 from bs4 import BeautifulSoup
 
-
-@dataclass
-class Song:
-    """Dataclass to store information about a song."""
-
-    title: str
-    artist: str
-    lyrics: str
-    url: str
+from azlyrics_api.models import Song
 
 
 class AZLyricsAPI:
@@ -96,69 +83,3 @@ class AZLyricsAPI:
             .strip("\n\r")
         )
         return Song(title=res_title, artist=res_artist, lyrics=lyrics, url=url)
-
-
-def export_to_xml(song: Song, path: Optional[str | Path] = None) -> str:
-    """Export song to XML."""
-    counter = count(2)
-    tagged_lyrics = "[V1]\n" + re.sub(
-        r"\n\n", lambda x: f"\n\n[V{next(counter)}]\n", song.lyrics
-    )
-    parsed_lyrics = ""
-    for line in tagged_lyrics.splitlines():
-        if line and not line.startswith("["):
-            parsed_lyrics += f" {line}"
-        else:
-            parsed_lyrics += line
-        parsed_lyrics += "\n"
-    E = lxml.builder.ElementMaker()
-    tree = E.song(E.title(song.title), E.author(song.artist), E.lyrics(parsed_lyrics))
-    xml = lxml.etree.tostring(
-        tree, encoding="UTF-8", xml_declaration=True, pretty_print=True
-    ).decode()
-    if path:
-        path = Path(path)
-        if path.is_dir():
-            path /= f"{song.title} - {song.artist}"
-        with open(path, "w") as fd:
-            fd.write(xml)
-    return xml
-
-
-if __name__ == "__main__":
-    import argparse
-    import sys
-    from pprint import pprint
-
-    parser = argparse.ArgumentParser(
-        description="Get song information from AZLyrics.",
-        epilog="AZLyrics API - Copyright (C) 2023 Zack Didcott",
-    )
-    parser.add_argument(
-        "query",
-        nargs="*",
-        metavar="title | artist",
-        type=str,
-        help="search query for the song",
-    )
-    parser.add_argument(
-        "--xml", type=str, help="file path or directory to export song as XML"
-    )
-    parser.add_argument('-v', '--verbose', action='store_true')
-    args = parser.parse_args()
-
-    api = AZLyricsAPI()
-    try:
-        song = api.query(args.query[0], args.query[1])
-    except Exception:
-        query = " ".join(args.query)
-        song = api.search(query, interactive=True)
-        if not song:
-            print("Song not found.")
-            sys.exit(1)
-    if args.xml:
-        export_to_xml(song, args.xml)
-    if args.verbose:
-        pprint(song)
-    else:
-        print(song.lyrics)
