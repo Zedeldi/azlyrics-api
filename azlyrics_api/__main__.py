@@ -3,7 +3,7 @@ import sys
 from pprint import pprint
 
 from azlyrics_api.api import AZLyricsAPI
-from azlyrics_api.export import export_to_xml
+from azlyrics_api.export import export_to_xml, xml_opensong
 
 
 def get_args() -> argparse.Namespace:
@@ -46,7 +46,7 @@ def main() -> None:
             print("Song not found.")
             sys.exit(1)
     if args.xml:
-        export_to_xml(song, args.xml)
+        export_to_xml(song, args.xml, xml_opensong)
     if args.verbose:
         pprint(song)
     else:
