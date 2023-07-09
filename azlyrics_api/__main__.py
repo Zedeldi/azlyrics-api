@@ -2,6 +2,8 @@ import argparse
 import sys
 from pprint import pprint
 
+import requests
+
 from azlyrics_api.api import AZLyricsAPI
 from azlyrics_api.export import export_to_xml, xml_opensong
 
@@ -38,13 +40,16 @@ def main() -> None:
     args = get_args()
     api = AZLyricsAPI()
     try:
-        song = api.query(args.query[0], args.query[1])
-    except Exception:
-        query = " ".join(args.query)
-        song = api.search(query, interactive=True)
-        if not song:
-            print("Song not found.")
-            sys.exit(1)
+        if len(args.query) == 2:
+            song = api.query(args.query[0], args.query[1])
+        else:
+            query = " ".join(args.query)
+            song = api.search(query, interactive=True)
+            if not song:
+                raise ValueError("Song not found.")
+    except (ValueError, requests.exceptions.HTTPError) as err:
+        print(err)
+        sys.exit(1)
     if args.xml:
         export_to_xml(song, args.xml, xml_opensong)
     if args.verbose:

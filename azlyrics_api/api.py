@@ -21,6 +21,18 @@ class AZLyricsAPI:
         """Return HTTP headers."""
         return {"User-Agent": self.USER_AGENT}
 
+    def get(
+        self,
+        url: str,
+        raise_for_status: bool = True,
+        headers: Optional[dict[str, str]] = None,
+    ) -> requests.Response:
+        """Send HTTP GET request to URL and return Response instance."""
+        response = requests.get(url, headers=headers or self.HTTP_HEADERS)
+        if raise_for_status:
+            response.raise_for_status()
+        return response
+
     @staticmethod
     def parse_url(url: str) -> dict[str, str]:
         """Return title and artist from URL."""
@@ -32,10 +44,7 @@ class AZLyricsAPI:
     ) -> list[Song] | Optional[Song]:
         """Return list of search results from query."""
         results = []
-        response = requests.get(
-            f"{self.SEARCH_URL}?q={query}&x={self._search_get_x()}",
-            headers=self.HTTP_HEADERS,
-        )
+        response = self.get(f"{self.SEARCH_URL}?q={query}&x={self._search_get_x()}")
         soup = BeautifulSoup(response.content, "html.parser")
         table = soup.find("table")
         if not table:
@@ -51,8 +60,8 @@ class AZLyricsAPI:
 
     def _search_get_x(self) -> str:
         """Get x value for search URL parameter."""
-        js = requests.get(self.SEARCH_X_URL, headers=self.HTTP_HEADERS).text
-        x = re.search(r'ep.setAttribute\("value", "(.*)"\);', js).group(1)
+        response = self.get(self.SEARCH_X_URL)
+        x = re.search(r'ep.setAttribute\("value", "(.*)"\);', response.text).group(1)
         return x
 
     def _search_interactive(self, results: list[Song]) -> Optional[Song]:
@@ -71,8 +80,7 @@ class AZLyricsAPI:
         title = title.lower().translate(stripped_chars)
         artist = artist.lower().translate(stripped_chars)
         url = f"{self.API_URL}/lyrics/{artist}/{title}.html"
-        response = requests.get(url, headers=self.HTTP_HEADERS)
-        response.raise_for_status()
+        response = self.get(url)
         soup = BeautifulSoup(response.content, "html.parser")
         res_title = (
             soup.select(".col-xs-12 > b:nth-child(5)")[0].getText().replace('"', "")
