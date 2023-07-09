@@ -13,7 +13,7 @@ class AZLyricsAPI:
 
     API_URL = "https://www.azlyrics.com"
     SEARCH_URL = "https://search.azlyrics.com/search.php"
-    SEARCH_X = "83e3793dba11c730f7c3ca957a2b7dbfd7150a976ca1359db1f3dd5114a546db"
+    SEARCH_X_URL = "https://www.azlyrics.com/geo.js"
     USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; rv:114.0) Gecko/20100101 Firefox/114.0"
 
     @property
@@ -33,7 +33,8 @@ class AZLyricsAPI:
         """Return list of search results from query."""
         results = []
         response = requests.get(
-            f"{self.SEARCH_URL}?q={query}&x={self.SEARCH_X}", headers=self.HTTP_HEADERS
+            f"{self.SEARCH_URL}?q={query}&x={self._search_get_x()}",
+            headers=self.HTTP_HEADERS,
         )
         soup = BeautifulSoup(response.content, "html.parser")
         table = soup.find("table")
@@ -47,6 +48,12 @@ class AZLyricsAPI:
         if interactive:
             return self._search_interactive(results)
         return results
+
+    def _search_get_x(self) -> str:
+        """Get x value for search URL parameter."""
+        js = requests.get(self.SEARCH_X_URL, headers=self.HTTP_HEADERS).text
+        x = re.search(r'ep.setAttribute\("value", "(.*)"\);', js).group(1)
+        return x
 
     def _search_interactive(self, results: list[Song]) -> Optional[Song]:
         """Select song from search results interactively."""
